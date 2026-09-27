@@ -3,15 +3,20 @@
 import Link from "next/link";
 import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
-import { IntentStatusBadge } from "@/components/IntentStatusBadge";
-import { CopyButton } from "@/components/CopyButton";
-import { SkeletonCard } from "@/components/Skeleton";
+import { useMemo } from "react";
+import { EmptyState } from "@/components/EmptyState";
+import { SolverTimeline } from "@/components/SolverTimeline";
+import { SolverPerformance } from "@/components/SolverPerformance";
+import { SlashEventFeed } from "@/components/SlashEventFeed";
 import { useSolver } from "@/hooks/useSolver";
 import { useIntentFeed } from "@/hooks/useIntentFeed";
+import { useSlashEvents } from "@/hooks/useSlashEvents";
 import { useTranslation } from "@/lib/i18n/I18nProvider";
-import { timeAgo } from "@/lib/time";
-import { CHAINS } from "@/lib/marketData";
 import { isValidStellarPublicKey } from "@/lib/stellarAddress";
+import { sanitizeDisplayText } from "@/lib/textSafety";
+import { summarizePenalties } from "@/lib/slashEvents";
+
+const PENALTY_WINDOW_DAYS = 30;
 
 const usdCompact = new Intl.NumberFormat("en-US", {
   style: "currency",
@@ -25,6 +30,15 @@ export default function SolverDetailPage({ params }: { params: { address: string
   const isValidAddress = isValidStellarPublicKey(params.address);
   const { solver, isLoading, error } = useSolver(isValidAddress ? params.address : null);
   const { items: fillHistory, isLoading: historyLoading, error: historyError } = useIntentFeed();
+  const slash = useSlashEvents(isValidAddress ? params.address : null);
+  const solverFills = useMemo(
+    () => fillHistory.filter((item) => item.solver === solver?.address),
+    [fillHistory, solver?.address],
+  );
+  const penalties = useMemo(
+    () => summarizePenalties(slash.events, PENALTY_WINDOW_DAYS),
+    [slash.events],
+  );
 
   return (
     <div className="min-h-screen">
@@ -144,66 +158,41 @@ export default function SolverDetailPage({ params }: { params: { address: string
               />
             </div>
 
-            {/* ── Fill history table ──────────────────────────────────────── */}
-            <div className="card overflow-hidden">
-              <div className="px-4 sm:px-5 py-3 sm:py-3.5 border-b border-vx-border bg-vx-surface/30">
-                <h2 className="text-sm font-semibold text-vx-text">
-                  Recent Fills by Solver
-                </h2>
+            {/* ── Performance, coverage and fill history ────────────────── */}
+            {historyLoading && fillHistory.length === 0 ? (
+              <div className="card p-5 space-y-3">
+                {[0, 1, 2].map((i) => (
+                  <div key={i} className="h-16 bg-vx-surface/40 rounded-lg animate-pulse" />
+                ))}
               </div>
+            ) : historyError ? (
+              <div role="alert" className="card p-6 sm:p-8 text-center text-sm text-vx-muted">
+                Couldn&apos;t load fill history right now.
+              </div>
+            ) : (
+              <SolverPerformance fills={solverFills} avgFillTimeSeconds={solver.avgFillTimeSeconds} />
+            )}
 
-              {historyLoading && fillHistory.length === 0 ? (
-                <div className="p-4 sm:p-5 space-y-3">
-                  {[0, 1, 2].map((i) => (
-                    <div key={i} className="h-16 bg-vx-surface/40 rounded-lg animate-pulse" />
-                  ))}
-                </div>
-              ) : historyError ? (
-                <div
-                  role="alert"
-                  className="p-6 sm:p-8 text-center text-sm text-vx-muted"
-                >
-                  Couldn&apos;t load fill history right now.
-                </div>
-              ) : fillHistory.filter(item => item.solver === solver.address).length === 0 ? (
-                <div className="p-6 sm:p-8 text-center">
-                  <p className="text-sm font-medium text-vx-text mb-1">
-                    {t("solverDetail.fillHistory.empty.title")}
-                  </p>
-                  <p className="text-xs text-vx-muted max-w-xs mx-auto">
-                    {t("solverDetail.fillHistory.empty.message")}
-                  </p>
-                </div>
-              ) : (
-                <div className="divide-y divide-vx-line">
-                  {fillHistory
-                    .filter((item) => item.solver === solver.address)
-                    .slice(0, 10)
-                    .map(fill => (
-                      <div
-                        key={fill.id}
-                        className="px-4 sm:px-5 py-4 hover:bg-vx-surface/30 transition-colors"
-                      >
-                        <div className="flex flex-col gap-2">
-                          <div className="flex items-center justify-between gap-4">
-                            <div className="flex-1 min-w-0">
-                              <div className="text-sm font-medium text-vx-text truncate">
-                                {fill.srcAmount} {fill.srcToken} →{" "}
-                                {fill.dstToken}
-                              </div>
-                              <div className="text-xs text-vx-muted capitalize">
-                                {fill.srcChain}
-                              </div>
-                            </div>
-                            <span className="text-xs text-vx-muted num flex-shrink-0">
-                              {timeAgo(fill.createdAt)}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                </div>
-              )}
+            {/* ── Penalties ─────────────────────────────────────────────── */}
+            <div className="mt-6 space-y-3">
+              <div className="card p-4 flex flex-wrap items-center gap-4 text-xs" aria-label={t("slash.summary.title")}>
+                <span className="eyebrow">{t("slash.summary.window", { days: PENALTY_WINDOW_DAYS })}</span>
+                <span className="text-vx-text num">{t("slash.summary.count", { count: penalties.count })}</span>
+                <span className="text-vx-text num">{t("slash.summary.total", { amount: penalties.totalUsd })}</span>
+                <span className="text-vx-muted">
+                  <span aria-hidden="true">{penalties.trend === "up" ? "▲ " : penalties.trend === "down" ? "▼ " : "■ "}</span>
+                  {t(`slash.trend.${penalties.trend}`)}
+                </span>
+              </div>
+              <SlashEventFeed
+                events={slash.events}
+                isLoading={slash.isLoading}
+                error={slash.error}
+                hasMore={slash.hasMore}
+                isLoadingMore={slash.isLoadingMore}
+                onLoadMore={slash.loadMore}
+                showSolver={false}
+              />
             </div>
           </>
         )}

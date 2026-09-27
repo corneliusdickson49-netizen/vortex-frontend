@@ -15,6 +15,8 @@ import { downloadCsv, buildIntentsCsv } from "@/lib/csv";
 import { SkeletonCard } from "@/components/Skeleton";
 import { buildIntentsCsv, downloadCsv } from "@/lib/csv";
 import type { IntentStatus } from "@/lib/types";
+import { useBufferedFeed, useFeedPause } from "@/hooks/useBufferedFeed";
+import { LiveFeedControls } from "@/components/LiveFeedControls";
 
 const STATUS_OPTIONS: Array<IntentStatus | "all"> = [
   "all",
@@ -65,7 +67,11 @@ export default function MyIntentsPage() {
   const address = useWalletStore((s) => s.address);
   const isConnected = useWalletStore((s) => s.isConnected);
 
-  const { intents, isLoading, error, isLive, mutate } = useMyLiveIntents(address);
+  const { intents: liveIntents, isLoading, error, isLive, mutate } = useMyLiveIntents(address);
+  const pause = useFeedPause("my-intents");
+  const { visible: intents, pending, overflow, flush } = useBufferedFeed(liveIntents, {
+    isPaused: pause.isPaused,
+  });
 
   const [statusFilter, setStatusFilter] = useState<IntentStatus | "all">("all");
   const [chainFilter, setChainFilter] = useState<string>("all");
@@ -208,6 +214,17 @@ export default function MyIntentsPage() {
                 Export CSV
               </button>
 
+              <LiveFeedControls
+                userPaused={pause.userPaused}
+                onToggle={pause.toggle}
+                pending={pending}
+                overflow={overflow}
+                onFlush={() => {
+                  flush();
+                  pause.containerRef.current?.focus();
+                }}
+              />
+
               <span className="text-xs text-vx-muted ml-auto" aria-live="polite" aria-atomic="true">
                 {filtered.length} intent{filtered.length === 1 ? "" : "s"}
               </span>
@@ -230,6 +247,7 @@ export default function MyIntentsPage() {
             )}
 
             {/* List */}
+            <div className="focus:outline-none" {...pause.containerProps}>
             {isLoading ? (
               <div className="space-y-2">
                 <p role="status" className="sr-only">Loading your intents...</p>
@@ -366,6 +384,8 @@ export default function MyIntentsPage() {
                 })}
               </div>
             )}
+
+            </div>
 
             {/* Pagination */}
             {pageCount > 1 && filtered.length > 0 && (

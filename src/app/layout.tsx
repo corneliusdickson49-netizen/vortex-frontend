@@ -4,6 +4,8 @@ import { WalletHydrator } from "@/components/WalletHydrator";
 import { ToastViewport } from "@/components/ToastViewport";
 import { IntentStatusWatcher } from "@/components/IntentStatusWatcher";
 import { I18nProvider } from "@/lib/i18n/I18nProvider";
+import { CommandPalette } from "@/components/CommandPalette";
+import { BuiltinCommands } from "@/components/BuiltinCommands";
 import { DEFAULT_LOCALE } from "@/lib/i18n";
 
 const TITLE = "Vortex | Cross-chain Swaps via Stellar";
@@ -108,6 +110,7 @@ export default function RootLayout({
           <WalletHydrator />
           <IntentStatusWatcher />
           {children}
+          <BuiltinCommands />
           <CommandPalette />
           <ToastViewport />
           <ConnectivityBanner />

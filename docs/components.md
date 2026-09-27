@@ -113,3 +113,35 @@ import { Tooltip } from "@/components/Tooltip";
 - Currently applied to `Price impact`, `Protocol fee`, and `Est. fill time` in
   SwapCard's quote details panel. See `Tooltip.stories.tsx` for interactive examples.
 
+
+## Live feed buffering (`useBufferedFeed`, `LiveFeedControls`)
+
+Home `ActivityFeed`, Explore and My Intents stop inserting rows while the user is reading (WCAG 2.2.2).
+`useFeedPause(feedId)` pauses when the pointer or focus is inside the list, when it is scrolled away from the
+top, or when the user presses the Live/Paused toggle (persisted per feed under `vortex-feed-paused:<feedId>`).
+`useBufferedFeed(items, { isPaused })` returns `{ visible, pending, overflow, flush }`: already-visible items
+keep updating in place (status changes) without reordering, new ones are queued (count capped at 500, shown
+as "500+"). The "N new intents" pill flushes the queue and moves focus to the list; counts are announced
+politely at most every 5 s. See the `BufferedLiveUpdates` story.
+
+## Solver portal (`src/app/solve`)
+
+`SolvePageClient.tsx` went from 708 lines to about 125 and is now just the page shell: hero, steps, and the tab
+list. Each tab is its own module in `src/app/solve/_components/`:
+
+| Module | Responsibility |
+| --- | --- |
+| `LeaderboardTab` | `useSolvers`, sort state, renders `SolverRow` |
+| `OpenIntentsTab` | `useOpenIntents` + `useAcceptIntent`, renders `DeadlineChip` |
+| `RegisterSolverTab` | `useRegistrationForm` + `useSolverRegistration`, renders `SolverOnboardingChecklist` |
+| `useRegistrationForm` | reducer owning field state, validation and per-wallet draft persistence |
+| `useSolveTab` | active tab synced to `?tab=` |
+
+Data fetching stays in hooks called by each tab; `SolverRow`, `DeadlineChip` and the checklist are
+presentational. Formatting helpers (`usdCompact`, `formatTimeRemaining`) live in `src/lib/format.ts`.
+
+**Tabs** follow the WAI-ARIA tabs pattern: roving `tabIndex`, Arrow Left/Right wrap, and Home/End jump to the
+first and last tab. The URL is read after mount, so server and client render the same markup, and it is
+updated with `history.replaceState`, which adds no history entries or route transitions. **Panels are kept
+alive:** a tab mounts the first time it is shown and is then hidden rather than unmounted. That keeps each
+tab's scroll position, sort order and form input, at the cost of keeping its SWR subscriptions running.

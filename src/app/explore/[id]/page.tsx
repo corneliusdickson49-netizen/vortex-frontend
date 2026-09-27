@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { CopyButton } from "@/components/CopyButton";
 import { Footer } from "@/components/Footer";
@@ -13,6 +13,7 @@ import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
 import { useIntent } from "@/hooks/useIntent";
 import { timeAgo } from "@/lib/time";
 import { truncateAddress } from "@/lib/stellarAddress";
+import { pushRecentIntent } from "@/lib/commands/recents";
 
 const NETWORK = process.env["NEXT_PUBLIC_NETWORK"] ?? "testnet";
 
@@ -37,6 +38,11 @@ export default function IntentDetailPage({
   const { intent, isLoading, error } = useIntent(params.id);
   const { copy } = useCopyToClipboard();
   const [txHashCopied, setTxHashCopied] = useState(false);
+
+  // Only record intents that actually resolved, so recents skip deleted ids.
+  useEffect(() => {
+    if (intent) pushRecentIntent(intent.id);
+  }, [intent]);
 
   const isExpired = useMemo(() => {
     if (!intent || intent.status !== "pending" || !intent.deadline)

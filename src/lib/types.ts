@@ -7,9 +7,11 @@ export type Chain = {
 
 export type Token = {
   symbol: string;
+  name?: string;
   decimals: number;
   priceUsd: number;
   contract?: string;
+  issuer?: string;
 };
 
 export type QuoteRequest = {
@@ -31,6 +33,7 @@ export type Quote = {
   priceImpactPct: number;
   protocolFeePct: number;
   rate: string;
+  expiresAt?: string | number;
 };
 
 export type IntentStatus = "pending" | "accepted" | "filled" | "failed";
@@ -63,6 +66,8 @@ export type OpenIntent = {
   dstToken: string;
   minOut: string;
   deadline: string;
+  /** USD value of `srcAmount` when the relay can price it (optional). */
+  usdValue?: number;
 };
 
 export type CreateIntentRequest = {
@@ -72,6 +77,7 @@ export type CreateIntentRequest = {
   dstToken: string;
   minOut?: string | undefined;
   dstAddress: string;
+  memo?: string;
 };
 
 export type CreateIntentResponse = {
@@ -95,6 +101,12 @@ export type Solver = {
   successRatePct: number;
   chains: string[];
   status: "active" | "inactive";
+  /** Rank in the previous period for the requested window, when the relay provides it. */
+  previousRank?: number;
+  /** Relay-side verification flag (display only — never used for authorization). */
+  verified?: boolean;
+  /** Home domain claimed by the solver; verified client-side via stellar.toml. */
+  homeDomain?: string;
 };
 
 export type RegisterSolverRequest = {

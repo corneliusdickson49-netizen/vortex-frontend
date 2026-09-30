@@ -63,9 +63,7 @@ export const en = {
   "swap.quote.highPriceImpactWarning": "High price impact above {threshold}% — review before swapping.",
   "swap.quote.unavailable": "Live quote unavailable — showing an estimated rate.",
   "swap.quote.noSolver": "No solver is available for this route right now.",
-  "swap.quote.highPriceImpactWarning": "High price impact above {threshold}% — review before swapping.",
   "swap.quote.staleWarning": "Quote is stale. Please wait for a refresh before submitting.",
-  "swap.quote.highPriceImpactWarning": "High price impact above {threshold}% — review before swapping.",
 
   "swap.submit.connecting": "Connecting wallet…",
   "swap.submit.building": "Preparing swap…",
@@ -81,10 +79,6 @@ export const en = {
   "swap.destination.placeholder": "G...",
   "swap.destination.invalidAddress":
     "Enter a valid Stellar address (starts with G).",
-
-  "swap.destination.label": "Destination address",
-  "swap.destination.placeholder": "G...",
-  "swap.destination.invalidAddress": "Enter a valid Stellar address (starts with G).",
 
   "swap.disclaimer": "Swap settles directly on Stellar · No wrapped tokens · Protected by solver bonds",
 
@@ -184,11 +178,6 @@ export const en = {
   "activityFeed.empty.title": "No activity yet",
   "activityFeed.empty.message": "Waiting for the first swap intents to arrive. Submit a swap to kick things off.",
   "activityFeed.empty.cta": "Swap now →",
-
-  "activityFeed.status.live": "Live",
-  "activityFeed.status.polling": "Polling",
-  "activityFeed.error.unavailable": "Live feed unavailable right now.",
-  "activityFeed.item.route": "{chain} · via {solver}",
 
   // solve/[address] — fill history empty
   "solverDetail.fillHistory.empty.title": "No fills yet",
